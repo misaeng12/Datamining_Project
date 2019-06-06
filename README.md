@@ -1,2 +1,1 @@
-# Datamining_Project
-Project in Datamining Course
+## Datamining Project
