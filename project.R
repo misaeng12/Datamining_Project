@@ -1,18 +1,18 @@
 library(dplyr)
 library(ggplot2)
-#library(geosphere)
-#library(lubridate)
+library(geosphere)
+library(lubridate)
 library(caret)
 library(RANN)
 library(randomForest)
-#library(gbm)
+library(gbm)
 library(xgboost)
-#library(ROSE)
+library(ROSE)
 select <- dplyr::select
 
-setwd("C:/Users/user/Misaeng/수업/2019-1/데이터마이닝/Project")
 
-####--------------------------- GMM -------------------------####
+data <- read.csv("final.csv")
+original.data <- data
 
 data1 <- filter(original.data, days > 31 & as.Date(area_st_date) < "2018-01-01" &
                   !grepl("행사", close_reason) & !grepl("한시", close_reason) &
@@ -20,30 +20,6 @@ data1 <- filter(original.data, days > 31 & as.Date(area_st_date) < "2018-01-01" 
                   !grepl("박람회", close_reason))
 data2 <- filter(data1, str_length(close_date)!=0)
 
-myGMM <- function(x, threshold=10^(-10), max.iter=1000) {
-  pi <- 1/2; mu <- sort(sample(x, 2)); sig <- rep(var(x), 2)
-  err <- 1; iter <- 0
-  while(err > threshold & iter < max.iter ){
-    y <- pi*dnorm(x, mu[1], sig[1])/(pi*dnorm(x, mu[1], sig[1])+(1-pi)*dnorm(x, mu[2], sig[2]))
-    old.pi <- pi; pi <- sum(y)/length(x)
-    mu <- c(sum(y*x)/sum(y), sum((1-y)*x)/sum(1-y))
-    sig <- sqrt(c(sum(y*(x-mu[1])^2)/sum(y), sum((1-y)*(x-mu[2])^2)/sum(1-y)))
-    err <- abs(pi-old.pi); iter <- iter + 1
-  }
-  return(list(y=as.numeric(y>0.5), parameter=c(pi=pi, mu=mu, sigma=sig),
-              error=c(error=err, iteration=iter)))
-}
-
-X <- c(X1 = rnorm(20000, 1, 2), X2 = rnorm(10000, 3, 3))
-Class <- as.factor(rep(c(1, 2), c(20000,10000)))
-ggplot() + geom_density(aes(X))
-ggplot() + geom_density(aes(X, linetype=Class)) + scale_linetype_manual(values=c(1, 2))
-GMM1 <- myGMM(X); GMM1[c(2,3)]
-
-Close <- as.factor(str_length(data1$close_date)!=0)
-ggplot() + geom_density(aes(data1$days))
-ggplot() + geom_density(aes(data1$days, linetype=Close)) + scale_linetype_manual(values=c(1, 2))
-GMM <- myGMM(data2$days); GMM[c(2,3)]
 
 
 ## 로별 평균 영업일수 vs 월 평균 매출금액 그래프
@@ -250,9 +226,10 @@ final$area_st_season <- as.factor(final$area_st_season)
 data <- final
 
 
-### train / test 나누기  # random으로 train, test 나눠보기
+### train / test 나누기
 #train <- filter(data, train_test_label=="train") %>% select(-train_test_label)
 #test <- filter(data, train_test_label=="test") %>% select(-train_test_label)
+                                                                           
 set.seed(11)
 train.index <- createDataPartition(data$y, p=0.7, list=F)
 #train.index <- sample(nrow(data), nrow(data)*0.7)
@@ -262,7 +239,7 @@ table(train$y)/nrow(train); nrow(train)
 table(test$y)/nrow(test); nrow(test)
 
 
-# Missing values 처리 (train set)
+# Missing values 처리
 X.train <- select(train, -y)
 X.test <- select(test, -y)
 preProcess_model <- preProcess(X.train, method='knnImpute')
@@ -270,31 +247,32 @@ X.train <- predict(preProcess_model, X.train)
 X.test <- predict(preProcess_model, X.test)
 train <- data.frame(y = train$y, X.train)
 test <- data.frame(y = test$y, X.test)
-# train <- train[complete.cases(train),]
-# test <- test[complete.cases(test),]
 
 
 # oversampling
-# train.rose <- ROSE(y_oneyear ~ ., train, p=0.2, seed=1)$data
-# table(train.rose$y)/nrow(train.rose)
-# train.data <- rbind(filter(train, y_oneyear==0), filter(train.rose, y_oneyear==1)); nrow(train.data)
-# table(train.data$y_oneyear)/nrow(train.data)
-# 
+train.rose <- ROSE(y_oneyear ~ ., train, p=0.2, seed=1)$data
+table(train.rose$y)/nrow(train.rose)
+train.data <- rbind(filter(train, y_oneyear==0), filter(train.rose, y_oneyear==1)); nrow(train.data)
+table(train.data$y_oneyear)/nrow(train.data)
+ 
 # undersampling (2:1)
-# train.data <- rbind(filter(train, y==0)[sample(sum(train$y==0), 2*sum(train$y==1)),],
-#                     filter(train, y==1))
-# table(train.data$y)/nrow(train.data)
+#train.data <- rbind(filter(train, y==0)[sample(sum(train$y==0), 2*sum(train$y==1)),],
+#                    filter(train, y==1))
+#table(train.data$y)/nrow(train.data)
 
 
-### 구별로 묶어서 해보기
+### 행정구별 군집화
 train.data <- filter(train, gu=="중구") %>% select(-gu)
 test.data <- filter(test, gu=="중구") %>% select(-gu)
+                                                                           
 #data <- filter(final, gu %in% c("강남구", "송파구", "서초구", "종로구", "마포구", "서대문구")) %>%
 #  mutate(gu = as.factor(as.character(data$gu)))
 #data <- filter(final, !(gu %in% c("중구", 강남구", "송파구", "서초구", "종로구", "마포구", "서대문구"))) %>%
 #  mutate(gu = as.factor(as.character(data$gu)))
+                                                                           
 train.data <- select(train, -(kospi_avg_lag2:kospi_avg_lag4))
 test.data <- select(test, -(kospi_avg_lag2:kospi_avg_lag4))
+                                                                           
 train.data2 <- select(train.data, -total_sales, -rental_fee)
 test.data2 <- select(test.data, -total_sales, -rental_fee)
 
