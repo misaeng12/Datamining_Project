@@ -1,4 +1,3 @@
-setwd("C:/Users/user/Misaeng/수업/2019-1/데이터마이닝/Project")
 g14.4 <- read.table("성별인구자료/2014.4.txt", skip=3, fileEncoding="utf-8")
 g15.1 <- read.table("성별인구자료/2015.1.txt", skip=3, fileEncoding="utf-8")
 g15.2 <- read.table("성별인구자료/2015.2.txt", skip=3, fileEncoding="utf-8")
