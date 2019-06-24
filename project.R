@@ -329,7 +329,7 @@ train.data.caret$y_oneyear = factor(y_oneyear, labels=c("No", "Yes")))
 
 models <- caretList(y_oneyear ~ . -area_st_season, data=train.data.caret,
                     trControl=trainControl, methodList=algorithmList)
-Sys.time() # 4:42~
+Sys.time()
 results <- resamples(models)
 summary(results)
 
