@@ -94,7 +94,6 @@ data[is.na(data$year), "year"] <- 2017
 
 sum(!complete.cases(data))                                                         #=668
 
-# 임대료는 지역차가 너무 크기 때문에 missing도 동 안에서 해결하는게 맞는 듯
 missing_dong <- unique(filter(data, !complete.cases(data))$dong); length(missing_dong) # 126개 동
 data1 <- filter(data, dong %in% missing_dong) %>% arrange(dong)                      # n=2142 (126*17)
 
@@ -102,7 +101,7 @@ nrow(filter(data1, is.na(first) & is.na(not1st)))                               
 missing_both_dong <- unique(filter(data1, is.na(first) & is.na(not1st))$dong)    # 38개 동
 group_by(data1, dong) %>% summarise(sum=sum(total, na.rm=T)) %>% filter(sum==0)
 filter(data, dong %in% c('개포1동', '잠실7동', '하계2동')) %>% arrange(dong)
-#개포1동(40), 잠실7동(0), 하계2동(2)(-> 하계1동으로 채우면 되지 않을까?)
+#개포1동(40), 잠실7동(0), 하계2동(2)
 
 ## 상관계수
 ff <- select(final, area_st_year, total_floor, total_area, franchise, near, near_caf., near_franchise,
@@ -111,13 +110,13 @@ ff <- select(final, area_st_year, total_floor, total_area, franchise, near, near
 ff$floating_pop <- as.numeric(sub(",", "", ff$floating_pop))
 ff$office_pop <- as.numeric(sub(",", "", ff$office_pop))
 ff$income_grade <- as.numeric(sub("분위", "", ff$income_grade))
-cor(ff[complete.cases(ff),])[14,]                                 ### 상관계수 제일 높은게 0.33(office_pop)
+cor(ff[complete.cases(ff),])[14,]
 
 data <- arrange(data, dong) %>% mutate(sequence = rep(1:17, 450))
-cor(data[complete.cases(data), c(2:4, 7)])                        ### 1층이랑 1층외가 0.66 (전체X)
+cor(data[complete.cases(data), c(2:4, 7)])
 
 
-## 1) 1층, 1층외 둘 중 하나는 있는 거
+## 1) 1층, 1층외 둘 중 하나는 있는 
 data2 <- filter(data1, !(dong %in% c('개포1동', '잠실7동', '하계2동')))  # =2091
 
 for(i in 1:nrow(data2)){
@@ -130,7 +129,7 @@ for(i in 1:nrow(data2)){
 data1 <- rbind(filter(data1, !(dong %in% unique(data2$dong))), data2) %>% arrange(dong)
 
 
-## 2) 1층, 1층외 둘 다 없는 거
+## 2) 1층, 1층외 둘 다 없는 데이터
 data3 <- filter(data1, !(dong %in% c('개포1동', '잠실7동', '하계2동')) & dong %in% missing_both_dong)
 
 for(i in 1:nrow(data3)){
